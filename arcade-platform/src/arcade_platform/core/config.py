@@ -32,17 +32,30 @@ class OAuthProviderClientSettings(BaseModel):
     # token_url: Optional[HttpUrl] = None # Could be added if needed directly
 
 class AuthSettings(BaseModel):
-    # Settings for the platform's own OAuth server if it issues tokens
-    jwt_secret_key: SecretStr = "super-secret-key-please-change-in-prod"
+    # Settings for the platform's own OAuth 2.0 server
+    jwt_secret_key: SecretStr = Field(default="your-strong-secret-key-for-jwt-please-change", min_length=32)
     jwt_algorithm: str = "HS256"
-    access_token_expire_minutes: int = 30
+    # access_token_expire_minutes: int = 30 # Already present below, ensuring one definition
+    # refresh_token_expire_days: int = 90 # Example for refresh token
+
+    # OAuth Server specific settings
+    oauth_server_issuer_uri: HttpUrl = "http://localhost:8000" # Example, should match deployment
+    oauth_server_access_token_expire_seconds: int = Field(default=3600, gt=0) # 1 hour
+    oauth_server_refresh_token_expire_seconds: int = Field(default=3600 * 24 * 90, gt=0) # 90 days
+
+    # For JWT access tokens, if used directly by Authlib (some grants might issue opaque tokens by default)
+    # oauth_server_jwt_audience: Optional[str] = "arcade-platform-api"
+    # oauth_server_jwt_jwks_uri: Optional[HttpUrl] = None # If using JWKS endpoint for public keys
 
     # Configuration for external OAuth providers the platform will connect TO
-    # (e.g., for tools to connect to GitHub, Google)
+    # (e.g., for tools to connect to GitHub, Google) - This part is already present
     providers: Dict[str, OAuthProviderClientSettings] = {
         "github": OAuthProviderClientSettings(scopes=["repo", "user:email"]),
         "google": OAuthProviderClientSettings(scopes=["https://www.googleapis.com/auth/gmail.send"])
     }
+
+    # Added access_token_expire_minutes from previous feedback if it was missed
+    access_token_expire_minutes: int = Field(default=30, gt=0)
 
 class LiteLLMSettings(BaseModel):
     # This could be a path to a YAML file, or the settings could be embedded here

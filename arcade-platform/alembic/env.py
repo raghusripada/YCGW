@@ -20,8 +20,8 @@ if config.config_file_name is not None:
 from arcade_platform.core.database import Base, DATABASE_URL
 
 # Import all your models here so Base.metadata is populated
-from arcade_platform.auth.models import User
-from arcade_platform.tools.models import ToolDefinition # Add this line
+from arcade_platform.auth.models import User, OAuth2Client, OAuth2AuthorizationCode, OAuth2Token
+from arcade_platform.tools.models import ToolDefinition
 
 # Set target_metadata to your Base.metadata
 target_metadata = Base.metadata
