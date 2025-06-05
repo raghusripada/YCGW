@@ -77,3 +77,30 @@ async def chat_completions_proxy(
         # Catch-all for other LiteLLM errors or unexpected issues
         litellm.utils.print_verbose(f"An unexpected error occurred: {e}")
         raise HTTPException(status_code=500, detail=f"An unexpected error occurred: {str(e)}")
+
+
+from typing import List
+from fastapi import Depends # Ensure Depends is imported
+from arcade_platform.auth.models import User as SQLUser # SQLAlchemy model
+# Assuming UserCreate schema is accessible for response model - not needed for this endpoint
+from arcade_platform.auth.user_manager import get_users # service function
+from arcade_platform.core.database import get_db_session # DB Session dependency
+from sqlalchemy.ext.asyncio import AsyncSession
+
+@router.get("/test-db-users", summary="Test DB: List Users", response_model=List[SQLUser])
+async def test_list_users(
+    db: AsyncSession = Depends(get_db_session), # Use the DB session dependency
+    skip: int = 0,
+    limit: int = 10
+):
+    """
+    Test endpoint to list users from the database using the session dependency.
+    The SQLUser model should have `model_config = ConfigDict(from_attributes=True)`
+    for FastAPI to automatically convert it for the response.
+    """
+    try:
+        users_crud = await get_users(db_session=db, skip=skip, limit=limit)
+        return users_crud
+    except Exception as e:
+        # Log the exception e
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
