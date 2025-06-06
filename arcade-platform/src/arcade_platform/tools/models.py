@@ -1,39 +1,53 @@
 import uuid
 from sqlalchemy import Column, String, Boolean, DateTime, func, Integer, JSON
-from sqlalchemy.dialects.postgresql import UUID, ARRAY # For PostgreSQL specific types
-# from sqlalchemy.orm import relationship # If relationships are needed later
-from arcade_platform.core.database import Base # Import Base from your database setup
+from sqlalchemy.dialects.postgresql import UUID, ARRAY
+from arcade_platform.core.database import Base
 from datetime import datetime
 
 class ToolDefinition(Base):
     __tablename__ = "tool_definitions"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    # A unique machine-readable name, e.g., "github_create_issue_v1" could also be an ID
-    # For simplicity, using UUID as primary key and 'name' for human-readable.
-    # If 'name' + 'version' should be unique, add a UniqueConstraint.
     name = Column(String, nullable=False, index=True) # Human-readable name
     description = Column(String, nullable=True)
 
-    # Storing complex, nested parameter schema as JSONB
-    # For PostgreSQL, JSONB is generally preferred over JSON for indexing and performance.
-    parameters_schema = Column(JSON, nullable=True) # JSONB can be specified with dialect options if needed
+    parameters_schema = Column(JSON, nullable=True) # e.g., OpenAPI Specification for parameters
 
-    auth_required = Column(Boolean, default=False)
-    # Storing list of auth scopes as an array of strings
-    auth_scopes = Column(ARRAY(String), nullable=True, default=list)
+    # OAuth related fields - these relate to *our platform's* OAuth server if tools are protected by it.
+    # For external service auth needed by the tool itself, see auth_provider_name.
+    auth_required = Column(Boolean, default=False) # Does calling this tool via our platform require platform auth?
+    auth_scopes = Column(ARRAY(String), nullable=True, default=list) # Platform OAuth scopes required
 
     execution_timeout_seconds = Column(Integer, default=30)
     version = Column(String, nullable=False, default="1.0.0")
 
-    # Storing invocation details (e.g., module path, function name, API endpoint) as JSONB
+    # Invocation details:
+    # For an MCP tool, this might store:
+    # {
+    #   "type": "mcp", // Invocation type
+    #   "mcp_target_url": "http://some-mcp-tool-service.example.com/invoke",
+    #   "mcp_method_name": "specific_mcp_function_to_call_on_tool",
+    #   // other mcp specific config, like version or protocol details
+    # }
+    # For other types like a Python function:
+    # {
+    #   "type": "python",
+    #   "module": "some.python.module",
+    #   "function": "function_name"
+    # }
     invocation_details = Column(JSON, nullable=True)
+
+    # NEW FIELD: Specifies the name of the external auth provider (e.g., "google", "github")
+    # whose token is required by the tool to operate.
+    # If null or empty, the tool does not directly require an external OAuth token via the platform.
+    auth_provider_name = Column(String(100), nullable=True, index=True)
 
     is_active = Column(Boolean, default=True) # To enable/disable tools
 
     created_at = Column(DateTime(timezone=True), server_default=func.now(), default=datetime.utcnow)
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), default=datetime.utcnow)
 
+    # from sqlalchemy import UniqueConstraint
     # __table_args__ = (
     #     UniqueConstraint('name', 'version', name='uq_tool_name_version'),
     # ) # Example if name+version should be unique

@@ -22,6 +22,7 @@ class User(Base):
 
     # Relationship to OAuth2Token (one user can have many tokens)
     tokens = relationship("OAuth2Token", back_populates="user")
+    external_tokens = relationship("UserExternalToken", back_populates="user") # For external provider tokens
 
     def __repr__(self):
         return f"<User(id={self.id}, email='{self.email}')>"
@@ -144,3 +145,33 @@ class OAuth2Token(Base):
 
     def is_refresh_token_expired(self) -> bool:
         return self.refresh_token_revoked_at != 0
+
+
+# New model for storing user's tokens from external OAuth providers (e.g., Google, GitHub)
+class UserExternalToken(Base):
+    __tablename__ = "user_external_tokens"
+
+    id = Column(Integer, primary_key=True) # Auto-incrementing primary key
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    provider_name = Column(String(100), nullable=False, index=True) # e.g., "google", "github"
+
+    # Tokens stored encrypted
+    encrypted_access_token = Column(Text, nullable=False)
+    encrypted_refresh_token = Column(Text, nullable=True) # Some providers might not issue refresh tokens for all flows
+
+    expires_at = Column(Integer, nullable=True) # Timestamp (seconds since epoch) when the access token expires
+    scopes = Column(ARRAY(String), nullable=True, default=list) # Scopes granted by the user for this token
+
+    # Timestamps for the record itself
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), default=datetime.utcnow)
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), default=datetime.utcnow)
+
+    # Relationships
+    user = relationship("User", back_populates="external_tokens")
+
+    # Add a unique constraint for user_id and provider_name
+    from sqlalchemy import UniqueConstraint
+    __table_args__ = (UniqueConstraint('user_id', 'provider_name', name='uq_user_provider_token'),)
+
+    def __repr__(self):
+        return f"<UserExternalToken(user_id='{self.user_id}', provider='{self.provider_name}')>"
