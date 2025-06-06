@@ -5,8 +5,8 @@ from typing import Optional, Dict, List, Any
 import uuid # For user_id type
 import time # For expires_at timestamp handling
 
-from arcade_platform.core.config import AppSettings
-from arcade_platform.auth.models import UserExternalToken # SQLAlchemy model
+from enableai_hub.core.config import AppSettings
+from enableai_hub.auth.models import UserExternalToken # SQLAlchemy model
 
 # Initialize Fernet with the key from settings
 try:

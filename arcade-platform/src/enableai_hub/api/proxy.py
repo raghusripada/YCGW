@@ -4,7 +4,7 @@ import litellm
 import os # For environment variables if not using Pydantic settings for this part
 
 # It's good practice to load the config path from settings eventually
-# from arcade_platform.core.config import settings
+# from enableai_hub.core.config import settings
 LITELLM_CONFIG_PATH = "litellm_config.yaml"
 # Ensure LiteLLM can find the config. This might be set on app startup too.
 # litellm.config_path = LITELLM_CONFIG_PATH # Set config path for LiteLLM
@@ -81,10 +81,10 @@ async def chat_completions_proxy(
 
 from typing import List
 from fastapi import Depends # Ensure Depends is imported
-from arcade_platform.auth.models import User as SQLUser # SQLAlchemy model
+from enableai_hub.auth.models import User as SQLUser # SQLAlchemy model
 # Assuming UserCreate schema is accessible for response model - not needed for this endpoint
-from arcade_platform.auth.user_manager import get_users # service function
-from arcade_platform.core.database import get_db_session # DB Session dependency
+from enableai_hub.auth.user_manager import get_users # service function
+from enableai_hub.core.database import get_db_session # DB Session dependency
 from sqlalchemy.ext.asyncio import AsyncSession
 
 @router.get("/test-db-users", summary="Test DB: List Users", response_model=List[SQLUser])

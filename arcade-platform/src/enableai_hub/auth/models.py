@@ -2,7 +2,7 @@ import uuid
 from sqlalchemy import Column, String, Boolean, DateTime, func, Text, ForeignKey, Integer # Add Text, ForeignKey, Integer
 from sqlalchemy.dialects.postgresql import UUID, ARRAY # Ensure ARRAY is imported
 from sqlalchemy.orm import relationship
-from arcade_platform.core.database import Base # Import Base from your database setup
+from enableai_hub.core.database import Base # Import Base from your database setup
 from datetime import datetime
 from pydantic import ConfigDict # For User model config
 from typing import List # For type hinting in helper methods

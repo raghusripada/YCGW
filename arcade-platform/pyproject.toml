@@ -1,7 +1,7 @@
 [tool.poetry]
-name = "arcade-platform"
+name = "enableai-hub"
 version = "0.1.0"
-description = "An LLM tool calling platform similar to Arcade.dev."
+description = "EnableAI Hub: An LLM tool calling platform."
 authors = ["AI Developer <ai@example.com>"]
 readme = "README.md"
 

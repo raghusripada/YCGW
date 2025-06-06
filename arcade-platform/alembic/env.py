@@ -17,11 +17,11 @@ if config.config_file_name is not None:
 
 # Import Base from your application's models
 # IMPORTANT: Update this import path to match your project structure
-from arcade_platform.core.database import Base, DATABASE_URL
+from enableai_hub.core.database import Base, DATABASE_URL
 
 # Import all your models here so Base.metadata is populated
-from arcade_platform.auth.models import User, OAuth2Client, OAuth2AuthorizationCode, OAuth2Token, UserExternalToken
-from arcade_platform.tools.models import ToolDefinition
+from enableai_hub.auth.models import User, OAuth2Client, OAuth2AuthorizationCode, OAuth2Token, UserExternalToken
+from enableai_hub.tools.models import ToolDefinition
 
 # Set target_metadata to your Base.metadata
 target_metadata = Base.metadata

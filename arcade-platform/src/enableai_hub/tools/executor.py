@@ -5,9 +5,9 @@ import httpx # For making HTTP calls to MCP tools
 import uuid # For UUID conversion and usage
 
 # Assuming UserContext and ExternalTokenInfo are defined in auth.context
-from arcade_platform.auth.context import UserContext #, ExternalTokenInfo (used as type hint)
-# from arcade_platform.tools.models import ToolDefinition as DBToolDefinition # SQLAlchemy model - Not directly used here, ToolRegistry returns it
-from arcade_platform.tools.registry import ToolRegistry # To fetch tool definitions
+from enableai_hub.auth.context import UserContext #, ExternalTokenInfo (used as type hint)
+# from enableai_hub.tools.models import ToolDefinition as DBToolDefinition # SQLAlchemy model - Not directly used here, ToolRegistry returns it
+from enableai_hub.tools.registry import ToolRegistry # To fetch tool definitions
 from sqlalchemy.ext.asyncio import AsyncSession # For type hinting db_session
 
 # ToolCallResult model (already defined)

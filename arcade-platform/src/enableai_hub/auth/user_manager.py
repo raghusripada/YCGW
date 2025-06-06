@@ -5,7 +5,7 @@ from pydantic import EmailStr, BaseModel as PydanticBaseModel
 from sqlalchemy import select, update as sql_update, delete as sql_delete
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from arcade_platform.auth.models import User # SQLAlchemy model
+from enableai_hub.auth.models import User # SQLAlchemy model
 # Password hashing utilities will be added later
 # from passlib.context import CryptContext # Example for password hashing
 

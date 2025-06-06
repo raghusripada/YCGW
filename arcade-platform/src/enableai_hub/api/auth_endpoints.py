@@ -3,12 +3,12 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from urllib.parse import urlencode # For redirect query params
 
-from arcade_platform.core.database import get_db_session
-from arcade_platform.auth.oauth_server import oauth2_server
-from arcade_platform.auth.models import User
-from arcade_platform.auth.user_manager import get_user_by_email # Using this for the stub
+from enableai_hub.core.database import get_db_session
+from enableai_hub.auth.oauth_server import oauth2_server
+from enableai_hub.auth.models import User
+from enableai_hub.auth.user_manager import get_user_by_email # Using this for the stub
 # Re-using authenticate_user_for_grant from oauth_server.py for form processing
-from arcade_platform.auth.oauth_server import authenticate_user_for_grant
+from enableai_hub.auth.oauth_server import authenticate_user_for_grant
 
 from typing import Optional
 
@@ -28,7 +28,7 @@ async def get_current_user_for_oauth_stub(
     # 1. Check session (if Starlette session middleware is added later)
     # user_id_from_session = request.session.get("user_id")
     # if user_id_from_session:
-    #     from arcade_platform.auth.user_manager import get_user # Assuming get_user by ID exists
+    #     from enableai_hub.auth.user_manager import get_user # Assuming get_user by ID exists
     #     user = await get_user(db, user_id_from_session)
     #     if user: return user
 

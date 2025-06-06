@@ -2,7 +2,7 @@ from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sess
 from sqlalchemy.orm import declarative_base
 from fastapi import Request # Import Request
 
-# from arcade_platform.core.config import AppSettings # Assuming AppSettings is in config.py
+# from enableai_hub.core.config import AppSettings # Assuming AppSettings is in config.py
 # For now, using a direct URL. Will be updated to use AppSettings later.
 DATABASE_URL = "postgresql+asyncpg://user:pass@localhost:5432/arcade_platform_db"
 

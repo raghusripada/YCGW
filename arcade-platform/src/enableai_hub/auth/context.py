@@ -2,10 +2,10 @@ from pydantic import BaseModel, Field
 from typing import List, Any, Optional, Dict # Added Dict
 import uuid
 
-from arcade_platform.auth.models import User as DBUser # SQLAlchemy User model
-from arcade_platform.auth.external_auth_manager import get_active_external_token # Function to get tokens
+from enableai_hub.auth.models import User as DBUser # SQLAlchemy User model
+from enableai_hub.auth.external_auth_manager import get_active_external_token # Function to get tokens
 from sqlalchemy.ext.asyncio import AsyncSession # For db session type hint
-# from arcade_platform.core.database import get_db_session # To fetch session if get_user_context becomes a dependency
+# from enableai_hub.core.database import get_db_session # To fetch session if get_user_context becomes a dependency
 
 # New Pydantic model for representing an external token within UserContext
 class ExternalTokenInfo(BaseModel):

@@ -5,11 +5,13 @@ from starlette.types import ASGIApp
 import json # For parsing request body if necessary
 
 # Tool Executor and User Context will be imported from their respective modules
-from arcade_platform.tools.executor import ToolExecutor, ToolCallResult # Added ToolCallResult
-from arcade_platform.auth.context import get_user_context #, UserContext (if needed here)
+from enableai_hub.tools.executor import ToolExecutor, ToolCallResult
+from enableai_hub.auth.context import get_user_context
+from enableai_hub.core.database import AsyncSessionFactory # For DB session in middleware
 # LiteLLM for making calls
 import litellm
-from typing import List, Dict, Any, Optional # Added Optional
+from typing import List, Dict, Any, Optional
+from sqlalchemy.ext.asyncio import AsyncSession # For type hint
 
 # Define Pydantic models for chat completion request and response parts
 # These could also live in a dedicated api/models.py or schemas.py file
@@ -61,7 +63,7 @@ class ChatCompletionResponse(BaseModel): # Simplified LiteLLM ModelResponse stru
     # error: Optional[Dict[str, Any]] = None # If there was an error
 
 
-class ArcadeToolMiddleware(BaseHTTPMiddleware):
+class EnableAIToolMiddleware(BaseHTTPMiddleware):
     def __init__(self, app: ASGIApp, tool_executor: ToolExecutor):
         super().__init__(app)
         self.tool_executor = tool_executor
@@ -91,15 +93,22 @@ class ArcadeToolMiddleware(BaseHTTPMiddleware):
         # Check if tool calling is requested and a user identifier is present
         # The 'user' field is a common way to pass user identifiers in OpenAI-compatible requests
         if chat_request.tools and chat_request.user:
-            print("[ArcadeToolMiddleware] Tool calling request identified.")
-            # Pass the parsed Pydantic model and the raw dict payload for flexibility
-            return await self.handle_tool_calling_request(chat_request, payload_dict)
+            print("[EnableAIToolMiddleware] Tool calling request identified.")
+            async with AsyncSessionFactory() as session:
+                try:
+                    return await self.handle_tool_calling_request(session, chat_request, payload_dict)
+                except Exception as e:
+                    # Ensure any exception during tool handling still results in a proper error response
+                    # This is a safety net; specific errors should be caught within handle_tool_calling_request
+                    print(f"[EnableAIToolMiddleware] Unhandled error during handle_tool_calling_request: {e}")
+                    import traceback; traceback.print_exc();
+                    raise HTTPException(status_code=500, detail="Internal server error during tool processing.")
         else:
             # If not a tool calling request, or no user, proxy as normal
             # Solution: The middleware will ALWAYS handle the LiteLLM call for this endpoint.
             # If not tool calling, it does a simple proxy.
 
-            print("[ArcadeToolMiddleware] Standard request, proxying to LiteLLM directly.")
+            print("[EnableAIToolMiddleware] Standard request, proxying to LiteLLM directly.")
             try:
                 # Pass the validated Pydantic model's dict representation
                 llm_request_data = chat_request.model_dump(exclude_unset=True)
@@ -109,15 +118,29 @@ class ArcadeToolMiddleware(BaseHTTPMiddleware):
             except Exception as e:
                 # Handle LiteLLM errors
                 # This duplicates error handling from proxy.py, ideally centralize it
-                print(f"[ArcadeToolMiddleware] Error during direct LiteLLM call: {e}")
+                print(f"[EnableAIToolMiddleware] Error during direct LiteLLM call: {e}")
                 # Consider more specific error mapping based on LiteLLM exceptions
                 raise HTTPException(status_code=500, detail=str(e))
 
 
-    async def handle_tool_calling_request(self, chat_request: ChatCompletionRequest, original_payload: Dict[str, Any]):
-        print(f"[ArcadeToolMiddleware] Handling tool calling for user: {chat_request.user}")
+    async def handle_tool_calling_request(self, db_session: AsyncSession, chat_request: ChatCompletionRequest, original_payload: Dict[str, Any]):
+        print(f"[EnableAIToolMiddleware] Handling tool calling for user: {chat_request.user}")
         try:
-            user_context = await get_user_context(chat_request.user) # Stubbed
+            # User object for get_user_context needs to be fetched using db_session if chat_request.user is just an ID
+            # Assuming chat_request.user is a user ID or simple identifier for now.
+            # For a full solution, chat_request.user might need to be resolved to a DBUser object first.
+            # For this step, we'll assume get_user_context can handle chat_request.user as is, OR
+            # that platform_user for get_user_context is fetched using chat_request.user and db_session.
+            # The current get_user_context expects a DBUser object.
+            # Let's assume chat_request.user is an email for the stub get_current_platform_user_stub
+            # which is then used by get_user_context. This part is a bit hand-wavy due to stubs.
+            # A more robust approach would be to resolve chat_request.user to a DBUser object here.
+            from enableai_hub.auth.user_manager import get_user_by_email # Temporary for stub
+            platform_user = await get_user_by_email(db_session, str(chat_request.user)) # Assuming user is email
+            if not platform_user:
+                raise HTTPException(status_code=403, detail="User not found for tool calling.")
+
+            user_context = await get_user_context(platform_user, db_session)
             initial_llm_payload = chat_request.model_dump(exclude_unset=True)
             llm_response = await litellm.acompletion(**initial_llm_payload)
 
@@ -148,7 +171,8 @@ class ArcadeToolMiddleware(BaseHTTPMiddleware):
                     )
                     tool_results.append(result)
                     continue
-                result = await self.tool_executor.execute( # Stubbed
+                result = await self.tool_executor.execute(
+                    db_session=db_session, # Pass the session here
                     tool_call_id=tool_call_id, tool_name=tool_name,
                     user_context=user_context, parameters=tool_params
                 )
@@ -179,7 +203,7 @@ class ArcadeToolMiddleware(BaseHTTPMiddleware):
         2. Makes a second LiteLLM call with the augmented message history.
         3. Returns the final LLM response.
         """
-        print("[ArcadeToolMiddleware] Generating final response with tool results.")
+        print("[EnableAIToolMiddleware] Generating final response with tool results.")
 
         updated_messages = list(messages_with_assistant_response)
 
@@ -191,7 +215,7 @@ class ArcadeToolMiddleware(BaseHTTPMiddleware):
                 content=tool_result.content
             ))
 
-        print(f"[ArcadeToolMiddleware] Messages for final LLM call: {json.dumps([m.model_dump(exclude_none=True) for m in updated_messages], indent=2)}")
+        print(f"[EnableAIToolMiddleware] Messages for final LLM call: {json.dumps([m.model_dump(exclude_none=True) for m in updated_messages], indent=2)}")
 
         final_llm_payload = original_request_payload.copy()
         final_llm_payload["messages"] = [msg.model_dump(exclude_none=True) for msg in updated_messages]
@@ -199,19 +223,19 @@ class ArcadeToolMiddleware(BaseHTTPMiddleware):
         final_llm_payload.pop("tools", None)
         final_llm_payload.pop("tool_choice", None)
 
-        print(f"[ArcadeToolMiddleware] Final LLM call payload: {json.dumps(final_llm_payload, indent=2)}")
+        print(f"[EnableAIToolMiddleware] Final LLM call payload: {json.dumps(final_llm_payload, indent=2)}")
 
         try:
             final_llm_response = await litellm.acompletion(**final_llm_payload)
-            print(f"[ArcadeToolMiddleware] Final LLM response: {final_llm_response.model_dump_json(indent=2)}")
+            print(f"[EnableAIToolMiddleware] Final LLM response: {final_llm_response.model_dump_json(indent=2)}")
 
             return JSONResponse(content=final_llm_response.model_dump())
 
         except litellm.exceptions.APIError as e:
-            print(f"[ArcadeToolMiddleware] LiteLLM APIError during final call: {e}")
+            print(f"[EnableAIToolMiddleware] LiteLLM APIError during final call: {e}")
             raise HTTPException(status_code=e.status_code or 500, detail=str(e))
         except Exception as e:
-            print(f"[ArcadeToolMiddleware] Unexpected error in generate_final_response: {e}")
+            print(f"[EnableAIToolMiddleware] Unexpected error in generate_final_response: {e}")
             import traceback
             traceback.print_exc()
             raise HTTPException(status_code=500, detail=f"An unexpected error occurred during final response generation: {str(e)}")

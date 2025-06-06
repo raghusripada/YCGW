@@ -5,7 +5,7 @@ from pydantic import BaseModel as PydanticBaseModel, Field, HttpUrl
 from sqlalchemy import select, delete as sql_delete
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from arcade_platform.tools.models import ToolDefinition # SQLAlchemy model
+from enableai_hub.tools.models import ToolDefinition # SQLAlchemy model
 # Assuming ToolParameterDefinition is part of the JSON schema in ToolDefinition model for now
 # If ToolParameterDefinition were a separate table, it would be handled differently.
 

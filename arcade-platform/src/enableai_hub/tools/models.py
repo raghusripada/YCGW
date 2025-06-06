@@ -1,7 +1,7 @@
 import uuid
 from sqlalchemy import Column, String, Boolean, DateTime, func, Integer, JSON
 from sqlalchemy.dialects.postgresql import UUID, ARRAY
-from arcade_platform.core.database import Base
+from enableai_hub.core.database import Base
 from datetime import datetime
 
 class ToolDefinition(Base):

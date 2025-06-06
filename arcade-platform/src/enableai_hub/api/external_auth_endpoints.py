@@ -6,10 +6,10 @@ import secrets # For generating 'state' parameter
 from urllib.parse import urlencode # For building query strings
 from typing import Optional, Dict, Any # Added Any
 
-from arcade_platform.core.database import get_db_session
-from arcade_platform.core.config import AppSettings
-from arcade_platform.auth.models import User # Assuming User model for current_user
-from arcade_platform.auth.external_auth_manager import store_external_token
+from enableai_hub.core.database import get_db_session
+from enableai_hub.core.config import AppSettings
+from enableai_hub.auth.models import User # Assuming User model for current_user
+from enableai_hub.auth.external_auth_manager import store_external_token
 # We'll need a way to get the current authenticated platform user.
 # This is a placeholder dependency. In a real app, this would come from your main auth system
 # (e.g., decoding a JWT from Authorization header set by your own OAuth server, or session).
@@ -26,7 +26,7 @@ async def get_current_platform_user_stub( # Renamed for clarity vs OAuth user
     # Ensure this user exists in your DB if you run this.
     # You can create one using user_manager.create_user if needed.
     test_user_email = "test@example.com" # Make sure this user exists for testing
-    from arcade_platform.auth.user_manager import get_user_by_email
+    from enableai_hub.auth.user_manager import get_user_by_email
     user = await get_user_by_email(db, test_user_email)
     if not user:
         # If no test user, this will fail. Consider creating one in a startup script for dev.

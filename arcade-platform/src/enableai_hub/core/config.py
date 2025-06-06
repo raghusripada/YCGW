@@ -9,7 +9,7 @@ class LogLevel(str, Enum):
     CRITICAL = "CRITICAL"
 
 class DatabaseSettings(BaseModel):
-    url: str = "postgresql+asyncpg://user:pass@localhost:5432/arcade"
+    url: str = "postgresql+asyncpg://user:pass@localhost:5432/enableai_hub"
     pool_size: int = Field(default=10, gt=0)
     echo: bool = False
 
@@ -65,7 +65,7 @@ class CelerySettings(BaseModel):
     result_backend: str = "redis://localhost:6379/2"
 
 class AppSettings(BaseModel):
-    app_name: str = "ArcadePlatform"
+    app_name: str = "EnableAI Hub"
     debug: bool = False
 
     database: DatabaseSettings = DatabaseSettings()

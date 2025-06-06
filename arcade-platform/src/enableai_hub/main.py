@@ -2,19 +2,19 @@ from fastapi import FastAPI, Request # Added Request for on_event
 from fastapi.responses import JSONResponse # Added for on_event
 from contextlib import asynccontextmanager # For lifespan context manager (FastAPI >= 0.90.0)
 
-from arcade_platform.api.proxy import router as proxy_router
-from arcade_platform.api.auth_endpoints import router as auth_router # Import OAuth2 router
-from arcade_platform.core.database import create_tables, drop_tables, engine as db_engine # For dev lifecycle & closing engine
-from arcade_platform.core.config import AppSettings # Import AppSettings
+from enableai_hub.api.proxy import router as proxy_router
+from enableai_hub.api.auth_endpoints import router as auth_router # Import OAuth2 router
+from enableai_hub.core.database import create_tables, drop_tables, engine as db_engine # For dev lifecycle & closing engine
+from enableai_hub.core.config import AppSettings # Import AppSettings
 import litellm
 import os
 
 # Import Middleware and ToolExecutor (already present)
-from arcade_platform.api.middleware import ArcadeToolMiddleware
-from arcade_platform.tools.executor import ToolExecutor
+from enableai_hub.api.middleware import EnableAIToolMiddleware
+from enableai_hub.tools.executor import ToolExecutor
 
 # Import OAuth2 server components
-from arcade_platform.auth.oauth_server import oauth2_server, register_oauth_grants
+from enableai_hub.auth.oauth_server import oauth2_server, register_oauth_grants
 
 # Load application settings
 # It's good practice to have a single, globally accessible settings instance,
@@ -72,7 +72,7 @@ tool_executor_instance = ToolExecutor()
 
 # Add Middleware
 app.add_middleware(
-    ArcadeToolMiddleware,
+    EnableAIToolMiddleware,
     tool_executor=tool_executor_instance
 )
 

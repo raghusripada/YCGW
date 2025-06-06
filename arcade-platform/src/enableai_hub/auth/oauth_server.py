@@ -10,9 +10,9 @@ from typing import Optional, Dict, List, Any
 from datetime import datetime
 from fastapi import Request as FastAPIRequest # To distinguish from Authlib's request
 
-from arcade_platform.core.database import get_db_session
-from arcade_platform.auth.models import User, OAuth2Client, OAuth2Token, OAuth2AuthorizationCode
-from arcade_platform.core.config import AppSettings
+from enableai_hub.core.database import get_db_session
+from enableai_hub.auth.models import User, OAuth2Client, OAuth2Token, OAuth2AuthorizationCode
+from enableai_hub.core.config import AppSettings
 
 app_settings = AppSettings()
 
