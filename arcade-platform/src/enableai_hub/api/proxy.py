@@ -81,13 +81,13 @@ async def chat_completions_proxy(
 
 from typing import List
 from fastapi import Depends # Ensure Depends is imported
-from enableai_hub.auth.models import User as SQLUser # SQLAlchemy model
+from enableai_hub.auth.models import User as SQLUser, UserResponse # Import UserResponse
 # Assuming UserCreate schema is accessible for response model - not needed for this endpoint
 from enableai_hub.auth.user_manager import get_users # service function
 from enableai_hub.core.database import get_db_session # DB Session dependency
 from sqlalchemy.ext.asyncio import AsyncSession
 
-@router.get("/test-db-users", summary="Test DB: List Users", response_model=List[SQLUser])
+@router.get("/test-db-users", summary="Test DB: List Users", response_model=List[UserResponse])
 async def test_list_users(
     db: AsyncSession = Depends(get_db_session), # Use the DB session dependency
     skip: int = 0,

@@ -4,8 +4,8 @@ from sqlalchemy.dialects.postgresql import UUID, ARRAY # Ensure ARRAY is importe
 from sqlalchemy.orm import relationship
 from enableai_hub.core.database import Base # Import Base from your database setup
 from datetime import datetime
-from pydantic import ConfigDict # For User model config
-from typing import List # For type hinting in helper methods
+from pydantic import ConfigDict, EmailStr # For User model config and UserResponse
+from typing import List, Optional # For type hinting in helper methods and UserResponse
 
 class User(Base):
     __tablename__ = "users"
@@ -26,6 +26,20 @@ class User(Base):
 
     def __repr__(self):
         return f"<User(id={self.id}, email='{self.email}')>"
+
+from pydantic import BaseModel as PydanticBaseModel # BaseModel for Pydantic models
+
+# Pydantic model for User API responses
+class UserResponse(PydanticBaseModel): # Inherit from PydanticBaseModel
+    id: uuid.UUID
+    email: EmailStr
+    full_name: Optional[str] = None
+    is_active: bool
+    is_superuser: bool
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
 
 
 # New OAuth2 Models based on Authlib examples for SQLAlchemy
