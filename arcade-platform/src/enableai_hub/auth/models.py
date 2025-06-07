@@ -189,3 +189,25 @@ class UserExternalToken(Base):
 
     def __repr__(self):
         return f"<UserExternalToken(user_id='{self.user_id}', provider='{self.provider_name}')>"
+
+
+import secrets # For generating key prefix
+
+class APIKey(Base):
+    __tablename__ = "api_keys"
+
+    id = Column(Integer, primary_key=True)
+    hashed_key = Column(String(255), unique=True, index=True, nullable=False)
+
+    name = Column(String(100), nullable=True)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), default=datetime.utcnow)
+    last_used_at = Column(DateTime(timezone=True), nullable=True)
+    expires_at = Column(DateTime(timezone=True), nullable=True)
+
+    user = relationship("User")
+
+    def __repr__(self):
+        return f"<APIKey(name='{self.name}', user_id='{self.user_id}')>"

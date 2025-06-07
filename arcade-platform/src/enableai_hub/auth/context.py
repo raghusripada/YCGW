@@ -1,80 +1,68 @@
 from pydantic import BaseModel, Field
-from typing import List, Any, Optional, Dict # Added Dict
+from typing import List, Any, Optional, Dict
 import uuid
 
-from enableai_hub.auth.models import User as DBUser # SQLAlchemy User model
-from enableai_hub.auth.external_auth_manager import get_active_external_token # Function to get tokens
-from sqlalchemy.ext.asyncio import AsyncSession # For db session type hint
-# from enableai_hub.core.database import get_db_session # To fetch session if get_user_context becomes a dependency
+from enableai_hub.auth.models import User as DBUser
+from enableai_hub.auth.external_auth_manager import get_active_external_token
+from sqlalchemy.ext.asyncio import AsyncSession
 
-# New Pydantic model for representing an external token within UserContext
 class ExternalTokenInfo(BaseModel):
     provider_name: str
-    access_token: str # Decrypted access token
+    access_token: str
     scopes: Optional[List[str]] = None
-    expires_at: Optional[int] = None # Timestamp
+    expires_at: Optional[int] = None
 
     class Config:
-        # Pydantic V2: from_attributes = True
-        # Pydantic V1: orm_mode = True
-        # This allows Pydantic to create the model from arbitrary objects (like dicts from other functions)
-        # if they have matching attribute names.
         from_attributes = True
 
 
 class UserContext(BaseModel):
-    """
-    Represents the context of the user for whom a tool is being executed.
-    """
     user_id: str
     is_authenticated: bool = False
     permissions: List[str] = Field(default_factory=list)
-
     external_tokens: Dict[str, ExternalTokenInfo] = Field(default_factory=dict)
 
-    # db_user: Optional[DBUser] = Field(default=None, exclude=True) # For Pydantic V2, use model_config
-
     class Config:
-        # Pydantic V2 config
         model_config = {"from_attributes": True, "arbitrary_types_allowed": True, "exclude": {"db_user"}}
-        # For Pydantic V1, orm_mode = True, arbitrary_types_allowed = True. Exclude via __fields__ if needed.
 
 
 async def get_user_context(
     platform_user: DBUser,
     db_session: AsyncSession,
-    # required_providers: Optional[List[str]] = None # Optional: to specify which tokens are needed
+    required_providers: Optional[List[str]] = None # New parameter
 ) -> UserContext:
     """
     Retrieves user context, including active external tokens for specified providers.
-    `platform_user` is the authenticated SQLAlchemy User object from your main platform auth.
+    `platform_user` is the authenticated SQLAlchemy User object.
+    If `required_providers` is None or empty, it might default to a common set or fetch none.
     """
-    print(f"[get_user_context] Building context for user ID: {platform_user.id}")
+    print(f"[get_user_context] Building context for user ID: {platform_user.id}. Required providers: {required_providers}")
 
     active_external_tokens: Dict[str, ExternalTokenInfo] = {}
 
-    # Example: Fetch token for "google". In a real scenario, `required_providers` might be passed.
-    providers_to_check = ["google"] # Could be dynamic based on tool requirements
+    providers_to_check = required_providers
+    if not providers_to_check: # Handles None or empty list
+        # Default behavior if no specific providers are requested:
+        providers_to_check = ["google"] # Example default
+        print(f"[get_user_context] No specific providers requested, defaulting to: {providers_to_check}")
 
-    for provider_name in providers_to_check:
-        token_info_dict = await get_active_external_token(
-            db_session=db_session,
-            user_id=platform_user.id,
-            provider_name=provider_name
-        )
-        if token_info_dict:
-            # Convert dict from get_active_external_token to ExternalTokenInfo Pydantic model
-            active_external_tokens[provider_name] = ExternalTokenInfo(**token_info_dict)
-            print(f"Fetched active token for provider: {provider_name}")
-        else:
-            print(f"No active token found for provider: {provider_name}")
+    if providers_to_check:
+        for provider_name in providers_to_check:
+            provider_name_lower = provider_name.lower() # Ensure lowercase for consistency
+            token_info_dict = await get_active_external_token(
+                db_session=db_session,
+                user_id=platform_user.id,
+                provider_name=provider_name_lower
+            )
+            if token_info_dict:
+                active_external_tokens[provider_name_lower] = ExternalTokenInfo(**token_info_dict)
+                print(f"[get_user_context] Fetched active token for provider: {provider_name_lower}")
+            else:
+                print(f"[get_user_context] No active token found for provider: {provider_name_lower}")
 
     return UserContext(
         user_id=str(platform_user.id),
         is_authenticated=True,
-        permissions=["tool:dummy_tool_allowed"], # Replace with actual permissions
+        permissions=["tool:dummy_tool_allowed"], # Placeholder for actual permissions
         external_tokens=active_external_tokens
-        # db_user=platform_user # If you need to pass the raw DBUser object
     )
-
-# The old stub get_user_context(user_identifier: Any) is now replaced by the more specific one above.

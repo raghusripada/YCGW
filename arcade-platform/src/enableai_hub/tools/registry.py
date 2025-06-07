@@ -93,6 +93,17 @@ class ToolRegistry:
         result = await db_session.execute(query)
         return result.scalars().all()
 
+    async def get_tool_definition_by_name_version(
+        self, db_session: AsyncSession, name: str, version: str = "1.0.0" # Default version
+    ) -> Optional[ToolDefinition]:
+        """Retrieves a tool definition by its logical name and version."""
+        stmt = select(ToolDefinition).where(
+            ToolDefinition.name == name,
+            ToolDefinition.version == version
+        )
+        result = await db_session.execute(stmt)
+        return result.scalars().first()
+
     async def update_tool_definition(
         self, db_session: AsyncSession, tool_id: uuid.UUID, tool_in: ToolDefinitionUpdate
     ) -> Optional[ToolDefinition]:

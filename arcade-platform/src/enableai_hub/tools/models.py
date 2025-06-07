@@ -42,6 +42,10 @@ class ToolDefinition(Base):
     # If null or empty, the tool does not directly require an external OAuth token via the platform.
     auth_provider_name = Column(String(100), nullable=True, index=True)
 
+    # NEW FIELD: List of external OAuth scopes required by this tool from its auth_provider_name
+    # e.g., for a Google Drive tool: ["https://www.googleapis.com/auth/drive.readonly"]
+    required_external_scopes = Column(ARRAY(String), nullable=True, default=list)
+
     is_active = Column(Boolean, default=True) # To enable/disable tools
 
     created_at = Column(DateTime(timezone=True), server_default=func.now(), default=datetime.utcnow)

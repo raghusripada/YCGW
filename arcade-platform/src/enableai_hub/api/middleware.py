@@ -8,6 +8,7 @@ import json # For parsing request body if necessary
 from enableai_hub.tools.executor import ToolExecutor, ToolCallResult
 from enableai_hub.auth.context import get_user_context
 from enableai_hub.core.database import AsyncSessionFactory # For DB session in middleware
+from enableai_hub.auth.user_manager import get_user_by_email # For user resolution
 # LiteLLM for making calls
 import litellm
 from typing import List, Dict, Any, Optional
@@ -124,23 +125,31 @@ class EnableAIToolMiddleware(BaseHTTPMiddleware):
 
 
     async def handle_tool_calling_request(self, db_session: AsyncSession, chat_request: ChatCompletionRequest, original_payload: Dict[str, Any]):
-        print(f"[EnableAIToolMiddleware] Handling tool calling for user: {chat_request.user}")
-        try:
-            # User object for get_user_context needs to be fetched using db_session if chat_request.user is just an ID
-            # Assuming chat_request.user is a user ID or simple identifier for now.
-            # For a full solution, chat_request.user might need to be resolved to a DBUser object first.
-            # For this step, we'll assume get_user_context can handle chat_request.user as is, OR
-            # that platform_user for get_user_context is fetched using chat_request.user and db_session.
-            # The current get_user_context expects a DBUser object.
-            # Let's assume chat_request.user is an email for the stub get_current_platform_user_stub
-            # which is then used by get_user_context. This part is a bit hand-wavy due to stubs.
-            # A more robust approach would be to resolve chat_request.user to a DBUser object here.
-            from enableai_hub.auth.user_manager import get_user_by_email # Temporary for stub
-            platform_user = await get_user_by_email(db_session, str(chat_request.user)) # Assuming user is email
-            if not platform_user:
-                raise HTTPException(status_code=403, detail="User not found for tool calling.")
+        print(f"[EnableAIToolMiddleware] Handling tool calling for user identifier: {chat_request.user}")
 
-            user_context = await get_user_context(platform_user, db_session)
+        if not chat_request.user:
+            # This case should ideally be caught by earlier checks if user field is mandatory for tools
+            raise HTTPException(status_code=400, detail="User identifier missing in request for tool calling.")
+
+        try:
+            user_identifier_str = str(chat_request.user) # Assume it's an email for now
+
+            # Resolve the user identifier to a platform DBUser object
+            platform_user = await get_user_by_email(db_session, user_identifier_str)
+
+            if not platform_user:
+                # If user is not found by the identifier provided
+                raise HTTPException(
+                    status_code=403, # Or 404, depending on desired semantics
+                    detail=f"User '{user_identifier_str}' not found or not authorized for tool usage."
+                )
+
+            print(f"[EnableAIToolMiddleware] Platform user resolved: {platform_user.id} ({platform_user.email})")
+
+            # Now platform_user is a valid DBUser object
+            # Pass required_providers=None to let get_user_context use its default logic (e.g. "google")
+            user_context = await get_user_context(platform_user, db_session, required_providers=None)
+
             initial_llm_payload = chat_request.model_dump(exclude_unset=True)
             llm_response = await litellm.acompletion(**initial_llm_payload)
 
@@ -184,11 +193,16 @@ class EnableAIToolMiddleware(BaseHTTPMiddleware):
             return await self.generate_final_response(messages_for_final_call, tool_results, original_payload)
 
         except litellm.exceptions.APIError as e:
+            # This specific error handling for LiteLLM should be fine
             raise HTTPException(status_code=e.status_code or 500, detail=str(e))
+        except HTTPException: # Re-raise HTTPExceptions directly
+            raise
         except Exception as e:
+            # General error handling
             import traceback
             traceback.print_exc()
-            raise HTTPException(status_code=500, detail=f"An unexpected error occurred: {str(e)}")
+            # Ensure this is not too verbose for production if not in debug mode
+            raise HTTPException(status_code=500, detail=f"An unexpected error occurred while handling tool call: {str(e)}")
 
 
     async def generate_final_response(

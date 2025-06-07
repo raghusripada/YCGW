@@ -9,8 +9,15 @@ from enableai_hub.auth.models import User
 from enableai_hub.auth.user_manager import get_user_by_email # Using this for the stub
 # Re-using authenticate_user_for_grant from oauth_server.py for form processing
 from enableai_hub.auth.oauth_server import authenticate_user_for_grant
+from fastapi.security import OAuth2PasswordRequestForm # For standard login form
+from enableai_hub.auth.token_manager import create_platform_access_token # New import
+from pydantic import BaseModel as PydanticBaseModel # Pydantic model for token response
 
 from typing import Optional
+
+class PlatformTokenResponse(PydanticBaseModel):
+    access_token: str
+    token_type: str = "bearer"
 
 router = APIRouter(
     tags=["OAuth2"],
@@ -118,3 +125,28 @@ async def issue_token(request: Request):
     # For now, we assume Authlib's Starlette integration correctly utilizes the session
     # managed by FastAPI's `Depends(get_db_session)` on the endpoint.
     return await oauth2_server.create_token_response(request)
+
+
+@router.post("/login/platform-token", response_model=PlatformTokenResponse)
+async def login_for_platform_access_token(
+    form_data: OAuth2PasswordRequestForm = Depends(), # Uses username and password fields
+    db: AsyncSession = Depends(get_db_session)
+):
+    """
+    Provides a JWT for platform users to authenticate against platform-secured endpoints
+    (not to be confused with the platform's OAuth2 server /oauth/token endpoint,
+    which is for OAuth2 client applications).
+    Username here is expected to be the user's email.
+    """
+    from enableai_hub.auth.user_manager import authenticate_platform_user
+
+    user = await authenticate_platform_user(db, email=form_data.username, password=form_data.password)
+    if not user:
+        raise HTTPException(
+            status_code=400,
+            detail="Incorrect email or password",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    access_token = create_platform_access_token(user=user)
+    return {"access_token": access_token, "token_type": "bearer"}
